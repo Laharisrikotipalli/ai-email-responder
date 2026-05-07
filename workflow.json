@@ -1,0 +1,167 @@
+{
+  "name": "AI Email Auto-Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "mailbox": "INBOX",
+        "options": {}
+      },
+      "id": "imap",
+      "name": "Email Read (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "credentials": {
+        "imap": {
+          "id": "cred-imap",
+          "name": "IMAP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "condition-sender",
+              "leftValue": "={{ $json.from.value[0].address }}",
+              "rightValue": "laharitest01@gmail.com",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "condition-subject",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Re: AI Auto-Reply:",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if",
+      "name": "Loop Prevention",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"model\": \"llama3:8b\",\n  \"stream\": false,\n  \"prompt\": \"You are a professional email assistant named Lahari. Write a reply to this email.\\n\\nSender name: {{ $json.from.value[0].name }}\\nSender email: {{ $json.from.value[0].address }}\\nSubject: {{ $json.subject }}\\nEmail body:\\n{{ $json.text }}\\n\\nInstructions:\\n- Start with Dear followed by the sender's actual name from above (not a placeholder)\\n- Write a helpful, professional, and concise reply that directly addresses the email content\\n- End the email with exactly: Warm regards,\\nLahari\\n- Never use placeholders like [Your Name] or [Sender] or [Recipient]\\n- Output only the email body text, nothing else\"\n}"
+      },
+      "id": "http",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "laharitest01@gmail.com",
+        "toEmail": "={{ $('Email Read (IMAP)').item.json.from.value[0].address }}",
+        "subject": "=Re: AI Auto-Reply: {{ $('Email Read (IMAP)').item.json.subject }}",
+        "text": "={{ $json.response }}",
+        "options": {
+          "messageId": "={{ $('Email Read (IMAP)').item.json.messageId }}"
+        }
+      },
+      "id": "smtp",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [800, 200],
+      "credentials": {
+        "smtp": {
+          "id": "cred-smtp",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "stop",
+      "name": "Stop Workflow",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [600, 400]
+    }
+  ],
+  "connections": {
+    "Email Read (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Loop Prevention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Prevention": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3",
+  "meta": {
+    "instanceId": "local-instance"
+  },
+  "id": "workflow-ai-email-responder",
+  "tags": []
+}
