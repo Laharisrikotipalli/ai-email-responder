@@ -4,13 +4,13 @@
       "host": "imap.gmail.com",
       "port": 993,
       "user": "laharitest01@gmail.com",
-      "password": "avaycrsxukalupcn"
+      "password": "app_password"
     },
     "smtp": {
       "host": "smtp.gmail.com",
       "port": 587,
       "user": "laharitest01@gmail.com",
-      "password": "avaycrsxukalupcn"
+      "password": "app_password"
     }
   }
 }
